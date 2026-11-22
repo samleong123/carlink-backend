@@ -56,8 +56,17 @@ class OperationsAnalyticsController
     {
         $this->authorize($request,'telemetry.read'); $this->vehicle($organization,$vehicle); $s=$this->sample($organization,$vehicle);
         $v=$this->json($s?->vehicle_data) ?? [];
-        return ApiResponse::success($request,['occurred_at'=>$s?->occurred_at,'mil_on'=>$v['mil_on'] ?? null,'has_fault_code'=>$v['has_dtc_fault'] ?? null,'codes_stored'=>false,
-            'source'=>'latest_packet_claim','scan_completeness'=>'unknown','fault_clearance_confirmed'=>false], 'Diagnostic Snapshot Retrieved');
+        $codes = is_array($v['dtc_codes'] ?? null) ? array_values($v['dtc_codes']) : [];
+        return ApiResponse::success($request,[
+            'occurred_at' => $s?->occurred_at,
+            'mil_on' => $v['mil_on'] ?? null,
+            'has_fault_code' => ($v['has_dtc_fault'] ?? null) || count($codes) > 0,
+            'dtc_codes' => $codes,
+            'codes_stored' => count($codes) > 0,
+            'source' => 'latest_packet_claim',
+            'scan_completeness' => 'unknown',
+            'fault_clearance_confirmed' => false,
+        ], 'Diagnostic Snapshot Retrieved');
     }
     public function energy(Request $request, string $organization, string $vehicle)
     {
@@ -118,7 +127,12 @@ class OperationsAnalyticsController
             : collect();
         foreach ($page->items() as $s) {
             $s->freshness=$s->occurred_at ? $this->freshness($organization,$s) : 'never_observed';
-            $claim=$this->json($s->vehicle_data); $s->has_fault_code=$claim['has_dtc_fault'] ?? null; $s->mil_on=$claim['mil_on'] ?? null; unset($s->vehicle_data);
+            $claim=$this->json($s->vehicle_data);
+            $codes = is_array($claim['dtc_codes'] ?? null) ? array_values($claim['dtc_codes']) : [];
+            $s->has_fault_code = ($claim['has_dtc_fault'] ?? null) || count($codes) > 0;
+            $s->dtc_codes = $codes;
+            $s->mil_on = $claim['mil_on'] ?? null;
+            unset($s->vehicle_data);
             $shift=$canSeeShifts ? $shiftsByVehicle->get($s->id) : null;
             $s->current_shift_id=$shift->id ?? null;
             $s->current_driver_id=$shift->driver_id ?? null;

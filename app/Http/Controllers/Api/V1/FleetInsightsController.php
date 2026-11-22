@@ -18,9 +18,39 @@ class FleetInsightsController
     {
         $this->allow($r,'drivers.read');
         [$size,$cursor]=\App\Support\CursorPage::options($r,200,['d.id']);
-        $page=DB::table('drivers as d')->leftJoin('driver_shifts as sh',fn($j)=>$j->on('sh.driver_id','=','d.id')->on('sh.organization_id','=','d.organization_id')->where('sh.state','active')->whereNull('sh.ended_at')->where('sh.attribution_expires_at','>',now()))
-            ->leftJoin('vehicles as v','v.id','=','sh.vehicle_id')->leftJoin('vehicle_latest_states as l','l.vehicle_id','=','v.id')->leftJoin('telemetry_samples as s',fn($j)=>$j->on('s.id','=','l.sample_id')->on('s.authorized_shift_id','=','sh.id'))
-            ->where('d.organization_id',$organization)->orderBy('d.id')->cursorPaginate($size,['d.id','d.name','d.status','v.id as vehicle_id','v.registration_number','v.make','v.model','s.latitude','s.longitude','s.speed_kmh','s.occurred_at','sh.started_at as shift_started_at'],'cursor',$cursor);
+        $page=DB::table('drivers as d')
+            ->leftJoin('driver_shifts as sh',fn($j)=>$j->on('sh.driver_id','=','d.id')->on('sh.organization_id','=','d.organization_id')->where('sh.state','active')->whereNull('sh.ended_at')->where('sh.attribution_expires_at','>',now()))
+            ->leftJoin('vehicles as v','v.id','=','sh.vehicle_id')
+            ->leftJoin('vehicle_latest_states as l',fn($j)=>$j->on('l.vehicle_id','=','v.id')->on('l.organization_id','=','d.organization_id'))
+            ->leftJoin('telemetry_samples as s',fn($j)=>$j->on('s.id','=','l.sample_id')->where(fn($q)=>$q->whereColumn('s.authorized_shift_id','sh.id')->orWhereColumn('s.occurred_at','>=','sh.started_at')))
+            ->where('d.organization_id',$organization)
+            ->orderBy('d.id')
+            ->cursorPaginate($size,[
+                'd.id','d.name','d.status','sh.id as shift_id',
+                'v.id as vehicle_id','v.registration_number','v.make','v.model',
+                's.latitude','s.longitude','s.speed_kmh','s.engine_rpm','s.occurred_at','s.vehicle_data',
+                'sh.started_at as shift_started_at','sh.attribution_expires_at',
+            ],'cursor',$cursor);
+
+        $settings = json_decode(DB::table('organization_settings')->where('organization_id', $organization)->value('settings') ?? '{}', true) ?: [];
+        $offlineAfter = (int) ($settings['device_offline_after_s'] ?? 180);
+        $privacy = app(\App\Services\DtcPrivacy::class);
+        $cutoff = CarbonImmutable::now('UTC')->subSeconds($offlineAfter);
+
+        foreach ($page->items() as $item) {
+            $claim = $item->vehicle_data ? $privacy->scrub(json_decode($item->vehicle_data, true, 32, JSON_THROW_ON_ERROR)) : [];
+            $codes = is_array($claim['dtc_codes'] ?? null) ? array_values($claim['dtc_codes']) : [];
+            $item->current_driver_name = $item->vehicle_id ? $item->name : null;
+            $item->driver_name = $item->name;
+            $item->freshness = $item->occurred_at
+                ? (CarbonImmutable::parse($item->occurred_at)->lt($cutoff) ? 'stale' : 'recent_packet')
+                : ($item->vehicle_id ? 'never_observed' : null);
+            $item->has_fault_code = $item->vehicle_id ? (($claim['has_dtc_fault'] ?? null) || count($codes) > 0) : null;
+            $item->dtc_codes = $codes;
+            $item->mil_on = $item->vehicle_id ? ($claim['mil_on'] ?? null) : null;
+            unset($item->vehicle_data);
+        }
+
         return ApiResponse::success($r,['items'=>$page->items(),'pagination'=>\App\Support\CursorPage::metadata($page)],'Driver Assignments Retrieved','Locations require currently authorized NFC shifts; old observations are not live GPS.');
     }
     public function coverage(Request $r, string $organization)

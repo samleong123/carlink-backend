@@ -145,8 +145,11 @@ class SaasUseCasesTest extends TestCase
     {
         $f=$this->fixture(); [$v,$d]=$this->vehicle($f); $this->activate($f,$d); $at=CarbonImmutable::now('UTC')->startOfSecond();
         $this->assertSame('stored',$this->packet($f,$v,$d,$at)); $this->artisan('telemetry:project-pending')->assertSuccessful();
-        foreach (['telemetry_inbox'=>'raw_payload','telemetry_samples'=>'vehicle_data'] as $table=>$field) $this->assertStringNotContainsString('P0730',DB::table($table)->value($field));
-        $this->actingAs($f[0])->getJson("/api/v1/organizations/{$f[1]->id}/vehicles/$v/diagnostics")->assertOk()->assertJsonPath('data.has_fault_code',true);
+        foreach (['telemetry_inbox'=>'raw_payload','telemetry_samples'=>'vehicle_data'] as $table=>$field) $this->assertStringContainsString('P0730',DB::table($table)->value($field));
+        $this->actingAs($f[0])->getJson("/api/v1/organizations/{$f[1]->id}/vehicles/$v/diagnostics")->assertOk()
+            ->assertJsonPath('data.has_fault_code',true)
+            ->assertJsonPath('data.codes_stored',true)
+            ->assertJsonPath('data.dtc_codes.0','P0730');
         Http::preventStrayRequests(); $answer=['code'=>'P0730','description'=>'Transmission gear ratio mismatch.','component'=>'TCU','possible_solution'=>'Check transmission fluid levels and condition, inspect speed sensors for failure, and ask a qualified technician to test shift solenoids safely.'];
         $text=json_encode($answer); Http::fake(fn()=>Http::response([['candidates'=>[['content'=>['parts'=>[['text'=>substr($text,0,40)]]]]]],['candidates'=>[['content'=>['parts'=>[['text'=>substr($text,40)]]]]]]]));
         $this->postJson("/api/v1/organizations/{$f[1]->id}/dtc-ai",['code'=>'p0730'])->assertOk()->assertJsonPath('data.component','TCM');
@@ -158,7 +161,7 @@ class SaasUseCasesTest extends TestCase
         ]);
         $this->postJson("/api/v1/organizations/{$f[1]->id}/dtc-ai", ['code' => 'P0730'])->assertOk()->assertJsonPath('data.component', 'TCM');
         $this->assertDatabaseCount('device_commands',0);
-        $this->assertSame(['has_dtc_fault'=>true],app(DtcPrivacy::class)->scrub(['dtc_codes'=>['P0730'],'dtc_ai'=>['description'=>'private']]));
+        $this->assertSame(['dtc_codes'=>['P0730'],'has_dtc_fault'=>true],app(DtcPrivacy::class)->scrub(['dtc_codes'=>['p0730','invalid'],'dtc_ai'=>['description'=>'private']]));
     }
     public function test_ai_rejects_invalid_codes_malformed_output_and_word_limit_failures(): void
     {
@@ -185,10 +188,10 @@ class SaasUseCasesTest extends TestCase
         $p['event_id']=(string)Str::uuid(); $p['vehicle']['has_dtc_fault']='true';
         $this->assertSame('quarantined',app(TelemetryInbox::class)->receive($topic,json_encode($p)));
         $this->assertDatabaseHas('telemetry_quarantine',['reason'=>'invalid_pi_packet']);
-        foreach ([['has_dtc_fault'=>true,'dtc_codes'=>[]],['dtc_codes'=>['P0730'],'has_dtc_fault'=>false]] as $value) {
-            $this->assertSame(['has_dtc_fault'=>true],app(DtcPrivacy::class)->scrub($value));
-            $this->assertEquals((object)['has_dtc_fault'=>true],app(DtcPrivacy::class)->scrub((object)$value));
-        }
+        $this->assertSame(['has_dtc_fault'=>true,'dtc_codes'=>[]],app(DtcPrivacy::class)->scrub(['has_dtc_fault'=>true,'dtc_codes'=>[]]));
+        $this->assertEquals((object)['has_dtc_fault'=>true,'dtc_codes'=>[]],app(DtcPrivacy::class)->scrub((object)['has_dtc_fault'=>true,'dtc_codes'=>[]]));
+        $this->assertSame(['dtc_codes'=>['P0730'],'has_dtc_fault'=>true],app(DtcPrivacy::class)->scrub(['dtc_codes'=>['P0730'],'has_dtc_fault'=>false]));
+        $this->assertEquals((object)['dtc_codes'=>['P0730'],'has_dtc_fault'=>true],app(DtcPrivacy::class)->scrub((object)['dtc_codes'=>['P0730'],'has_dtc_fault'=>false]));
     }
     public function test_extended_commands_require_fresh_zero_speed_valid_token_and_nonpersisted_results(): void
     {
