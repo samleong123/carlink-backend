@@ -1,0 +1,37 @@
+purpose:
+  stands_in_for: User-specified payment gateway generateLink endpoint
+  unblocks: Local testing of outgoing form encoding and connection failure without contacting the live gateway
+assumptions:
+  - id: gateway-request-shape
+    status: supported
+    claim: The requested integration posts the documented form fields and fixed card type.
+    reason: The user supplied the request; this does not establish independent live provider behavior.
+    verification: On 2026-11-16 Laravel payment feature test sent a real HTTP request through the Postman simulation. The mock validated content type and all expected fields and returned 200. Local testing remains a stand-in and does not establish live provider behavior.
+    source: postman/specs/gateway.assumed.yaml; postman/mocks/payment-gateway/default.js; tests/Feature/PaymentTest.php
+    updated_at: '2026-11-16'
+  - id: gateway-response-shape
+    status: supported
+    claim: The gateway returns a payment URL as data.link and a transaction reference as data.gateway_id.
+    reason: The user supplied an example response showing these fields; universal behavior is not independently established.
+    verification: No live provider request was made; the local simulation models the user-supplied shape with synthetic values.
+    source: postman/specs/gateway.assumed.yaml; app/Http/Controllers/Api/V1/PaymentController.php
+    updated_at: '2026-11-16'
+  - id: gateway-callback-authentication
+    status: unknown
+    claim: The secret callback URL remains confidential and the provider invokes it only after a successful payment.
+    reason: The user specified that the URL should be secret and used only on success. No signature or status lookup is available. Confidentiality in the live gateway, customer-facing pages, and infrastructure logs has not been verified.
+    verification: Local tests show a valid one-use bearer URL confirms a payment, replays are rejected, and expired requests do not confirm; no real provider callback has been captured. Anyone possessing the URL can make the first request.
+    source: app/Http/Controllers/Api/V1/PaymentController.php; tests/Feature/PaymentTest.php
+    updated_at: '2026-11-16'
+  - id: gateway-callback-payload
+    status: supported
+    claim: A success callback contains a response field whose value is a JSON-encoded transaction object.
+    reason: The user supplied a successful callback example. Other gateway responses and callback Content-Type are unknown.
+    verification: Synthetic examples can exercise parsing; no independently captured provider delivery was tested.
+    source: tests/Feature/PaymentTest.php; app/Http/Controllers/Api/V1/PaymentController.php
+    updated_at: '2026-11-16'
+fingerprints:
+  - id: local-2026-11-16
+    date: '2026-11-16'
+    commit: null
+    cli: '1.76.0'

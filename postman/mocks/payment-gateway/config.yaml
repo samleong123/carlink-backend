@@ -1,0 +1,11 @@
+version: 1
+id: fbc3c88c-1334-4f5a-8a28-bf69cdb1232b
+name: Gateway assumptions for local testing
+slug: gateway-assumptions-for-local-te
+protocol: http
+interceptRequests: true
+port: 4500
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

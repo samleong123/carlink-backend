@@ -1,0 +1,318 @@
+# OpenAPI fragment: merge `paths` and the Fleet* definitions in `components`.
+paths:
+  /api/v1/organizations/{organization}/{resource}:
+    parameters:
+      - $ref: '#/components/parameters/FleetOrganization'
+      - $ref: '#/components/parameters/FleetResource'
+    get:
+      tags: [Fleet]
+      summary: List tenant fleet records
+      description: Requires vehicles.read, drivers.read or devices.read according to resource. Returns up to 100 records in the active tenant.
+      responses:
+        '200':
+          $ref: '#/components/responses/FleetListResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+    post:
+      tags: [Fleet]
+      summary: Create a vehicle, driver or device
+      description: Requires vehicles.write, drivers.write or devices.write according to resource. Registration alone does not provision broker credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              anyOf:
+                - $ref: '#/components/schemas/FleetVehicleCreate'
+                - $ref: '#/components/schemas/FleetDriverCreate'
+                - $ref: '#/components/schemas/FleetDeviceCreate'
+      responses:
+        '201':
+          $ref: '#/components/responses/FleetItemResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '409':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '422':
+          $ref: '#/components/responses/FleetErrorResponse'
+  /api/v1/organizations/{organization}/{resource}/{id}:
+    parameters:
+      - $ref: '#/components/parameters/FleetOrganization'
+      - $ref: '#/components/parameters/FleetResource'
+      - $ref: '#/components/parameters/FleetRecordId'
+    get:
+      tags: [Fleet]
+      summary: Retrieve a tenant fleet record
+      responses:
+        '200':
+          $ref: '#/components/responses/FleetItemResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+    patch:
+      tags: [Fleet]
+      summary: Update a tenant fleet record
+      description: Send the current version for optimistic concurrency. A stale version returns 409. Suspending a driver closes the active shift and records the closure event; broker cache invalidation is not yet implemented.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              anyOf:
+                - $ref: '#/components/schemas/FleetVehicleUpdate'
+                - $ref: '#/components/schemas/FleetDriverUpdate'
+                - $ref: '#/components/schemas/FleetDeviceUpdate'
+      responses:
+        '200':
+          $ref: '#/components/responses/FleetItemResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '409':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '422':
+          $ref: '#/components/responses/FleetErrorResponse'
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/archive:
+    parameters:
+      - $ref: '#/components/parameters/FleetOrganization'
+      - name: vehicle
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Fleet]
+      summary: Archive a vehicle
+      description: Rejects an open device installation and preserves historical records.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version: {type: integer, minimum: 1}
+      responses:
+        '200':
+          $ref: '#/components/responses/FleetItemResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '409':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '422':
+          $ref: '#/components/responses/FleetErrorResponse'
+  /api/v1/organizations/{organization}/devices/{device}/installations:
+    parameters:
+      - $ref: '#/components/parameters/FleetOrganization'
+      - $ref: '#/components/parameters/FleetDeviceId'
+    get:
+      tags: [Fleet]
+      summary: List a device's installations
+      responses:
+        '200':
+          $ref: '#/components/responses/FleetListResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+    post:
+      tags: [Fleet]
+      summary: Record a device installation
+      description: Creates an open-ended interval. The device and vehicle must belong to this organization and cannot overlap another installation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id, effective_from]
+              properties:
+                vehicle_id: {type: string, format: uuid}
+                effective_from: {type: string, format: date-time}
+      responses:
+        '201':
+          $ref: '#/components/responses/FleetItemResponse'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '409':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '422':
+          $ref: '#/components/responses/FleetErrorResponse'
+  /api/v1/organizations/{organization}/devices/{device}/installations/{installation}/close:
+    parameters:
+      - $ref: '#/components/parameters/FleetOrganization'
+      - $ref: '#/components/parameters/FleetDeviceId'
+      - name: installation
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Fleet]
+      summary: Close an open device installation
+      description: Returns 409 when an associated shift is active or extends beyond the proposed installation end. Close or resolve the shift first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [effective_to, reason]
+              properties:
+                effective_to: {type: string, format: date-time}
+                reason: {type: string, maxLength: 255}
+      responses:
+        '200':
+          description: Closed; data contains installation_id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetEnvelope'
+        '401':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '403':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '404':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '409':
+          $ref: '#/components/responses/FleetErrorResponse'
+        '422':
+          $ref: '#/components/responses/FleetErrorResponse'
+components:
+  parameters:
+    FleetOrganization:
+      name: organization
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    FleetResource:
+      name: resource
+      in: path
+      required: true
+      schema: {type: string, enum: [vehicles, drivers, devices]}
+    FleetRecordId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    FleetDeviceId:
+      name: device
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    FleetListResponse:
+      description: Successful response; data.items contains up to 100 records.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/FleetEnvelope'
+    FleetItemResponse:
+      description: Successful response; data.item contains the record.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/FleetEnvelope'
+    FleetErrorResponse:
+      description: Request failed; see the envelope's title, desc, and data.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/FleetEnvelope'
+  schemas:
+    FleetEnvelope:
+      type: object
+      required: [status, timestamp, ip_address, request_id, title, desc, data]
+      properties:
+        status: {type: integer}
+        timestamp: {type: string, format: date-time}
+        ip_address: {type: string, nullable: true}
+        ip_country: {type: string, nullable: true}
+        request_id: {type: string, format: uuid}
+        title: {type: string}
+        desc: {type: string}
+        data: {type: object}
+    FleetVehicleCreate:
+      type: object
+      required: [registration_number, registration_country]
+      properties:
+        registration_number: {type: string, maxLength: 32, pattern: '^[A-Za-z0-9 -]+$'}
+        registration_country: {type: string, minLength: 2, maxLength: 2, pattern: '^[A-Za-z]{2}$'}
+        make: {type: string, nullable: true, maxLength: 100}
+        model: {type: string, nullable: true, maxLength: 100}
+        model_year: {type: integer, nullable: true, minimum: 1886, maximum: 2200}
+        fuel_type: {type: string, nullable: true, maxLength: 30}
+        passenger_capacity: {type: integer, nullable: true, minimum: 0, maximum: 65535}
+        status: {type: string, enum: [active, maintenance, inactive]}
+    FleetDriverCreate:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, maxLength: 160}
+        employee_code: {type: string, nullable: true, maxLength: 100}
+        email: {type: string, nullable: true, format: email, maxLength: 255}
+        phone: {type: string, nullable: true, maxLength: 40}
+        user_id: {type: string, format: uuid, nullable: true, description: Active driver-role membership in this organization; one driver record per user.}
+        status: {type: string, enum: [active, suspended]}
+    FleetDeviceCreate:
+      type: object
+      required: [serial_number]
+      properties:
+        serial_number: {type: string, maxLength: 160}
+        name: {type: string, nullable: true, maxLength: 160}
+        app_version: {type: string, nullable: true, maxLength: 100}
+    FleetVehicleUpdate:
+      type: object
+      required: [version]
+      properties:
+        version: {type: integer, minimum: 1}
+        registration_number: {type: string, maxLength: 32, pattern: '^[A-Za-z0-9 -]+$'}
+        registration_country: {type: string, minLength: 2, maxLength: 2, pattern: '^[A-Za-z]{2}$'}
+        make: {type: string, nullable: true, maxLength: 100}
+        model: {type: string, nullable: true, maxLength: 100}
+        model_year: {type: integer, nullable: true, minimum: 1886, maximum: 2200}
+        fuel_type: {type: string, nullable: true, maxLength: 30}
+        passenger_capacity: {type: integer, nullable: true, minimum: 0, maximum: 65535}
+        status: {type: string, enum: [active, maintenance, inactive]}
+    FleetDriverUpdate:
+      type: object
+      required: [version]
+      properties:
+        version: {type: integer, minimum: 1}
+        name: {type: string, maxLength: 160}
+        employee_code: {type: string, nullable: true, maxLength: 100}
+        email: {type: string, nullable: true, format: email, maxLength: 255}
+        phone: {type: string, nullable: true, maxLength: 40}
+        user_id: {type: string, format: uuid, nullable: true, description: Active driver-role membership in this organization; one driver record per user.}
+        status: {type: string, enum: [active, suspended]}
+    FleetDeviceUpdate:
+      type: object
+      required: [version]
+      properties:
+        version: {type: integer, minimum: 1}
+        serial_number: {type: string, maxLength: 160}
+        name: {type: string, nullable: true, maxLength: 160}
+        app_version: {type: string, nullable: true, maxLength: 100}

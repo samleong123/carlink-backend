@@ -1,0 +1,124 @@
+openapi: 3.0.3
+info:
+  title: CarLink Backend API
+  version: 0.4.0
+  description: Email-link-only human authentication, independent SaaS staff, paid subscription snapshots and entitlements, automatic pending devices, signed edge commands, transient DTC AI, own-driver privacy/safety appeals, maintenance/compliance and fleet coverage. Production hardware/provider/concurrency acceptance remains required. Operational tenant APIs require an active paid subscription by default; billing remains reachable. Device Bearer tokens apply ONLY to edge routes. Payment retains the specified bearer callback flow; its User-Agent is not proof of origin.
+servers:
+  - url: /
+security:
+  - cookieAuth: []
+paths:
+  /sanctum/csrf-cookie:
+    get:
+      security: []
+      summary: Set the CSRF cookie for a first-party frontend
+      description: Requires credentialed CORS. A subsequent state-changing request must send the XSRF token.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+  /api/v1/health/live:
+    get:
+      security: []
+      summary: Check application liveness
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+  /api/v1/auth/magic-links:
+    post:
+      security: []
+      summary: Request an email login link
+      description: Returns the same response for eligible and ineligible accounts. Eligible tokens and encrypted HTML/plain-text mail intents commit together; ID-only auth-mail queue jobs deliver asynchronously. A 202 does not mean SES delivery. Normalized-email and global rate limits apply. The log transport never writes login credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+                return_to: {type: string, description: Relative frontend path}
+      responses:
+        '202': {$ref: '#/components/responses/Success'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/auth/magic-links/consume:
+    post:
+      security: []
+      summary: Explicitly confirm a single-use login or organization signup link
+      description: Requires a browser session, its cookies and a valid X-XSRF-TOKEN header. The request Origin or Referer hostname must be configured in SANCTUM_STATEFUL_DOMAINS, including the backend hostname for same-origin Swagger. Stateless requests are rejected before consuming the token. Successful confirmation commits a mandatory security email for every human stakeholder with trusted IP/source, account-local timestamp and bounded client-reported user agent/browser/platform. No geographic/device identity is inferred.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string, minLength: 64, maxLength: 64}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error', description: Signup plan changed or another pending signup exists; transaction rolls back without consuming the link.}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/auth/logout:
+    post:
+      summary: End the current web session
+      security: [{cookieAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/me:
+    get:
+      summary: Retrieve the authenticated user, memberships and current tenant permission keys
+      security: [{cookieAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations:
+    get:
+      summary: List the current user's active organization memberships
+      security: [{cookieAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}:
+    get:
+      summary: Retrieve the current organization
+      security: [{cookieAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+components:
+  securitySchemes:
+    cookieAuth: {type: apiKey, in: cookie, name: carlink_session}
+  parameters:
+    Organization:
+      name: organization
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    Success:
+      description: Successful JSON response
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Envelope'}
+    Error:
+      description: JSON error response. data.error.code identifies the error; validation fields are in data.error.fields. All seven envelope keys are retained.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Envelope'}
+  schemas:
+    Envelope:
+      type: object
+      additionalProperties: false
+      required: [status, timestamp, ip_address, request_id, title, desc, data]
+      properties:
+        status: {type: integer}
+        timestamp: {type: string, format: date-time}
+        ip_address: {type: string, nullable: true, description: Validated visitor IP only when the direct peer is explicitly trusted; otherwise the peer IP.}
+        ip_country: {type: string, nullable: true, description: Two-letter ISO country code resolved from Cloudflare CF-IPCountry header when available.}
+        request_id: {type: string, format: uuid, description: 'Server-generated identity, also in X-Request-ID. Incoming IDs are untrusted logging claims only.'}
+        title: {type: string}
+        desc: {type: string}
+        data: {type: object}

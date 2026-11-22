@@ -1,0 +1,89 @@
+paths:
+  /api/v1/organizations/{organization}/journeys:
+    get:
+      summary: List automatically detected vehicle journeys
+      description: Requires journeys.read. Accepted telemetry feeds the detector automatically through the scheduled inbox projector. Late observations are flagged for an unimplemented rebuild. Driver-segment privacy, driver attribution and journey distance remain unavailable, so no fleet history is exposed through driver-only grants.
+      parameters:
+        - {$ref: '#/components/parameters/Organization'}
+        - name: vehicle_id
+          in: query
+          schema: {type: string, format: uuid}
+        - name: state
+          in: query
+          schema: {type: string, enum: [active, completed, incomplete]}
+        - name: from
+          in: query
+          description: Inclusive journey start timestamp.
+          schema: {type: string, format: date-time}
+        - name: to
+          in: query
+          description: Exclusive journey start timestamp.
+          schema: {type: string, format: date-time}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 100}
+      responses:
+        '200':
+          description: Tenant-scoped journey list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Envelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: {$ref: '#/components/schemas/JourneyRecord'}
+                          driver_attribution: {type: string, enum: [not_implemented]}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/journeys/{journey}:
+    get:
+      summary: Retrieve an automatically detected journey
+      parameters:
+        - {$ref: '#/components/parameters/Organization'}
+        - name: journey
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Tenant-scoped journey summary.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Envelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          journey: {$ref: '#/components/schemas/JourneyRecord'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+components:
+  schemas:
+    JourneyRecord:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        vehicle_id: {type: string, format: uuid}
+        state: {type: string, enum: [active, completed, incomplete]}
+        started_at: {type: string, format: date-time}
+        ended_at: {type: string, format: date-time, nullable: true}
+        last_observed_at: {type: string, format: date-time}
+        end_reason: {type: string, nullable: true}
+        unknown_seconds: {type: integer, minimum: 0}
+        detection_version: {type: string}
+        revision: {type: integer, minimum: 1}
+        distance_m: {type: number, nullable: true}
+        distance_quality: {type: string, enum: [not_implemented]}
+        driver_attribution: {type: string, enum: [not_implemented]}
+        is_passenger_trip: {type: boolean, enum: [false]}

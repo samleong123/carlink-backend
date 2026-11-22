@@ -1,0 +1,79 @@
+paths:
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/mileage:
+    get:
+      summary: Retrieve a partial estimated vehicle mileage projection
+      description: Speed-only pilot ledger. Unknown intervals are never treated as zero. Driver allocation and full coverage accounting are unavailable.
+      parameters:
+        - {$ref: '#/components/parameters/Organization'}
+        - name: vehicle
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Estimated distance and baseline, with explicit partial-coverage status.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Envelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accepted_distance_m: {type: integer}
+                          distance_since_baseline_m: {type: integer, nullable: true}
+                          estimated_odometer_m: {type: integer, nullable: true}
+                          unknown_interval_count: {type: integer}
+                          coverage_complete: {type: boolean, enum: [false]}
+                          driver_allocation: {type: string, enum: [not_implemented]}
+                          baseline_alignment: {type: string, enum: [integrated_segment_boundary], description: Partial trapezoids are integrated exactly at the baseline timestamp.}
+                          baseline:
+                            type: object
+                            nullable: true
+                            properties:
+                              reading_m: {type: integer}
+                              observed_at: {type: string, format: date-time}
+                          as_of: {type: string, format: date-time, nullable: true}
+                          quality: {type: string, enum: [estimated_partial_coverage]}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/mileage/segments:
+    get:
+      summary: List recent current mileage segments
+      description: Results are bounded to 100, newest first. Unknown distance is null and is not zero.
+      parameters:
+        - {$ref: '#/components/parameters/Organization'}
+        - {name: vehicle, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/odometer-observations:
+    post:
+      summary: Record an initial odometer baseline
+      description: Requires mileage.correct. A single initial baseline is supported; later calibration or adjustment is not implemented.
+      parameters:
+        - {$ref: '#/components/parameters/Organization'}
+        - {name: vehicle, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reading_m, observed_at, reason]
+              properties:
+                reading_m: {type: integer, minimum: 0, maximum: 10000000000}
+                observed_at: {type: string, format: date-time}
+                reason: {type: string, minLength: 3, maxLength: 500}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}

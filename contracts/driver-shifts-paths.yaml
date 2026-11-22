@@ -1,0 +1,104 @@
+paths:
+  /api/v1/organizations/{organization}/drivers/{driver}/credentials:
+    get:
+      summary: List driver NFC credential metadata
+      description: Requires credentials.manage. Returns credential metadata only; HMAC digests and UID fingerprints are never returned.
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - name: driver
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    post:
+      summary: Enrol an NFC fingerprint for a driver
+      description: Requires credentials.manage. UID fingerprints are low-assurance and never returned; rotation requires a migration. The fingerprint is SHA-256 of normalized UID bytes, not the raw UID.
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - name: driver
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential_fingerprint, credential_type]
+              properties:
+                credential_fingerprint: {type: string, pattern: '^[0-9a-fA-F]{64}$', writeOnly: true}
+                credential_type: {type: string, enum: [nfc_uid_sha256]}
+                expires_at: {type: string, format: date-time}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/drivers/{driver}/credentials/{credential}/revoke:
+    post:
+      summary: Revoke a driver's NFC credential
+      description: Requires credentials.manage. Revocation takes effect for the online domain service; offline cache invalidation is not implemented.
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - name: driver
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: credential
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/driver-shifts:
+    get:
+      summary: List driver shifts
+      description: Drivers see only their linked driver records; authorized staff can see their tenant's shifts. Returns up to 100 items.
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/driver-shifts/{shift}:
+    get:
+      summary: Retrieve a driver shift
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - name: shift
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/driver-shifts/{shift}/close:
+    post:
+      summary: Administratively close a shift
+      description: Requires shifts.manage. This is an audited administrative action, not a driver-operated trip action.
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - name: shift
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, maxLength: 255}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}

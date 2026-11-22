@@ -1,0 +1,1678 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CarLink v1 implemented telemetry ingress subset",
+  "description": "Extensions are retained but not semantically validated or projected. Runtime additionally checks broker identity, installation intervals, sample uptime <= packet uptime, finite numbers, a seven-day replay horizon and five-minute future bound.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "message_type",
+    "event_id",
+    "device_id",
+    "installation_id",
+    "boot_id",
+    "sequence",
+    "occurred_at",
+    "sent_at",
+    "uptime_ms",
+    "edge_version",
+    "config_version",
+    "clock",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "message_type": {
+      "const": "telemetry"
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "device_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "installation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "boot_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "uptime_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "config_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "edge_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "clock": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "synchronized": {
+          "type": "boolean"
+        },
+        "estimated_error_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "vehicle": {
+          "type": "object",
+          "properties": {
+            "speed_kmh": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 250
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "engine_rpm": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 30000
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "coolant_temp_c": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": -60,
+                  "maximum": 250
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "engine_load_pct": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "throttle_pct": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "intake_temp_c": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": -60,
+                  "maximum": 250
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maf_gps": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 2000
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "fuel_rate_lph": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "fuel_level_pct": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "odometer_km": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1000000000
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "engine_runtime_s": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 100000000000
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "ecu_voltage_v": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "mil_on": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "engine_state": {
+              "type": "object",
+              "required": [
+                "value",
+                "quality"
+              ],
+              "properties": {
+                "value": {
+                  "enum": [
+                    "running",
+                    "off",
+                    "unknown",
+                    null
+                  ]
+                },
+                "quality": {
+                  "enum": [
+                    "valid",
+                    "estimated",
+                    "unsupported",
+                    "unavailable",
+                    "stale",
+                    "ambiguous",
+                    "invalid"
+                  ]
+                },
+                "observed_at": {},
+                "sample_id": {},
+                "observed_uptime_ms": {}
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "unsupported",
+                          "unavailable"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "quality": {
+                        "enum": [
+                          "valid",
+                          "estimated"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "observed_at",
+                      "sample_id",
+                      "observed_uptime_ms"
+                    ],
+                    "properties": {
+                      "observed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "sample_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "observed_uptime_ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "gps": {
+          "type": "object",
+          "required": [
+            "fix_valid"
+          ],
+          "properties": {
+            "fix_valid": {
+              "type": "boolean"
+            },
+            "quality": {
+              "enum": [
+                "valid",
+                "estimated",
+                "unsupported",
+                "unavailable",
+                "stale",
+                "ambiguous",
+                "invalid"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "fix_valid": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "latitude",
+                  "longitude",
+                  "sample_id",
+                  "observed_at",
+                  "observed_uptime_ms"
+                ],
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "heading_deg": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 359.999999
+                  },
+                  "speed_kmh": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 250
+                  },
+                  "horizontal_accuracy_m": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "sample_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "observed_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+                  },
+                  "observed_uptime_ms": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

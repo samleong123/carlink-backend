@@ -1,0 +1,66 @@
+asyncapi: 2.6.0
+info:
+  title: CarLink implemented telemetry MQTT subset
+  version: 0.3.0
+  description: >-
+    Documents only single telemetry ingress and accepted/duplicate application ACKs.
+    MQTT uses slash-separated topics; RabbitMQ AMQP routing keys replace slashes with dots.
+    No live WSS, ACL or publisher-confirm deployment has been verified. Broader device-event,
+    heartbeat, batch, presence and command contracts are not represented as implemented handlers here.
+defaultContentType: application/json
+servers:
+  commissionedBroker:
+    url: '{host}'
+    protocol: mqtt
+    protocolVersion: '5.0'
+    description: Deployment-specific broker hostname; provision TLS/WSS and device credentials independently. This is not a working endpoint.
+    variables:
+      host: {default: mqtt.example.invalid}
+channels:
+  fleet/v1/{organization}/{device}/up/telemetry:
+    description: Dedicated broker-authorized device topic, QoS 1, not retained. Payload organization claims never establish tenant identity.
+    parameters:
+      organization: {$ref: '#/components/parameters/Organization'}
+      device: {$ref: '#/components/parameters/Device'}
+    subscribe:
+      operationId: receiveTelemetry
+      summary: Backend receives and durably accepts a single telemetry event
+      description: >-
+        64 KiB maximum, nesting depth 12. Validated device and historical installation required.
+        Durable inbox, audit responsibility and ACK outbox commit together before broker delivery ACK.
+        Canonical measurements have stable sample identity. Unknown extensions are retained only.
+      message:
+        oneOf:
+          - {$ref: '#/components/messages/Telemetry'}
+          - {$ref: '#/components/messages/PiTelemetry'}
+  fleet/v1/{organization}/{device}/down/ingest_ack:
+    description: Device-specific QoS 1 application ACK, not retained. Retries use stable outbox message IDs; devices deduplicate by event ID.
+    parameters:
+      organization: {$ref: '#/components/parameters/Organization'}
+      device: {$ref: '#/components/parameters/Device'}
+    publish:
+      operationId: publishIngestAck
+      summary: Backend acknowledges durable responsibility, not completed analytics
+      description: >-
+        Produced by outbox:publish using TLS AMQP mandatory publishing and publisher confirms.
+        Accepted and duplicate only. Invalid packets currently have hash/reason quarantine records,
+        not rejection ACKs or a tenant review workflow. A rearmed generation survives in-flight completion.
+      message: {$ref: '#/components/messages/IngestAck'}
+components:
+  parameters:
+    Organization: {description: Broker-authorized organization UUID., schema: {type: string, format: uuid}}
+    Device: {description: Provisioned device UUID., schema: {type: string, format: uuid}}
+  messages:
+    PiTelemetry:
+      name: PiTelemetry
+      summary: Pi packet snapshots with server-verified serial and plate; clock quality and sensor timing unreported.
+      schemaFormat: application/schema+json;version=draft-2020-12
+      payload: {$ref: './json-schema/v1/pi_telemetry.schema.json'}
+    Telemetry:
+      name: Telemetry
+      schemaFormat: application/schema+json;version=draft-2020-12
+      payload: {$ref: './json-schema/v1/telemetry.schema.json'}
+    IngestAck:
+      name: IngestAck
+      schemaFormat: application/schema+json;version=draft-2020-12
+      payload: {$ref: './json-schema/v1/ingest_ack.schema.json'}

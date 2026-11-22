@@ -1,0 +1,746 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://carlink.example/contracts/pi_telemetry.schema.json",
+    "title": "Pi packet-snapshot telemetry v1",
+    "description": "Device serial and plate are checked against broker route identity and historical server installations. No boot, sequence, sensor timestamp or clock quality is invented.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "message_type",
+        "event_id",
+        "timestamp",
+        "gateway"
+    ],
+    "properties": {
+        "gateway": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                },
+                "vehicle_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                },
+                "edge_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                }
+            },
+            "required": [
+                "device_id",
+                "vehicle_id",
+                "edge_version"
+            ]
+        },
+        "network": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "lte_band": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000
+                },
+                "earfcn": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 4000000
+                },
+                "pci": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1007
+                },
+                "rssi_dbm": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -150,
+                    "maximum": 0
+                },
+                "rsrp_dbm": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -160,
+                    "maximum": -20
+                },
+                "rsrq_db": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -50,
+                    "maximum": 10
+                },
+                "sinr_db": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -30,
+                    "maximum": 50
+                },
+                "roaming": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "connected": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "modem_model": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "imei": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "imsi": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "registered_plmn": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "operator": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "network_type": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "registration_status": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "cell_id": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "tac": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                }
+            }
+        },
+        "gps": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "latitude": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -90,
+                    "maximum": 90
+                },
+                "longitude": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -180,
+                    "maximum": 180
+                },
+                "altitude_m": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -1000,
+                    "maximum": 20000
+                },
+                "speed_kmh": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 250
+                },
+                "heading_deg": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 360
+                },
+                "satellites": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "hdop": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "fix_valid": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "timestamp": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "date-time",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "required": [
+                            "fix_valid"
+                        ],
+                        "properties": {
+                            "fix_valid": {
+                                "const": true
+                            }
+                        }
+                    },
+                    "then": {
+                        "required": [
+                            "latitude",
+                            "longitude",
+                            "timestamp"
+                        ],
+                        "properties": {
+                            "latitude": {
+                                "type": "number"
+                            },
+                            "longitude": {
+                                "type": "number"
+                            },
+                            "timestamp": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "vehicle": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "calculated_fuel_consumption": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "rateLph": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 1000
+                        },
+                        "instantL100km": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 1000000
+                        },
+                        "totalLitres": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 100000000
+                        },
+                        "distanceKm": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 100000000
+                        },
+                        "averageL100km": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 1000000
+                        },
+                        "averageKmPerL": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 1000000
+                        },
+                        "rateSource": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "direct",
+                                "maf",
+                                "unknown",
+                                null
+                            ]
+                        }
+                    }
+                },
+                "engine_rpm": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 20000
+                },
+                "speed_kmh": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 250
+                },
+                "coolant_temp_c": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -40,
+                    "maximum": 215
+                },
+                "engine_load_pct": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "throttle_pct": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "intake_temp_c": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -40,
+                    "maximum": 215
+                },
+                "maf_gps": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000
+                },
+                "fuel_rate_lph": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1000
+                },
+                "fuel_level_pct": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "odometer_km": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 10000000
+                },
+                "engine_runtime_s": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "ecu_voltage_v": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "obd_connected": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "engine_running": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "mil_on": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "has_dtc_fault": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "description": "Presence only; preferred over code arrays. Unknown/null or false does not prove a complete ECU scan or confirmed fault clearance."
+                },
+                "dtc_codes": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^[PCBU][0-3][0-9A-Fa-f]{3}$"
+                    },
+                    "deprecated": true,
+                    "description": "Legacy input only. Backend strips codes before persistence. New collectors must remove codes before MQTT/spooling and publish has_dtc_fault instead."
+                }
+            }
+        },
+        "device_health": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "cpu_temp_c": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": -40,
+                    "maximum": 150
+                },
+                "cpu_usage_pct": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "memory_usage_pct": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "disk_usage_pct": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "uptime_s": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "pending_records": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 10000000
+                },
+                "ble_obd_connected": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "lte_connected": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "last_sync_at": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "date-time",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+                }
+            }
+        },
+        "driving_behaviour": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "acceleration": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "x_mps2": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": -200,
+                            "maximum": 200
+                        },
+                        "y_mps2": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": -200,
+                            "maximum": 200
+                        },
+                        "z_mps2": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": -200,
+                            "maximum": 200
+                        }
+                    }
+                },
+                "gyroscope": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "x_dps": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": -4000,
+                            "maximum": 4000
+                        },
+                        "y_dps": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": -4000,
+                            "maximum": 4000
+                        },
+                        "z_dps": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": -4000,
+                            "maximum": 4000
+                        }
+                    }
+                },
+                "threshold": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "harsh_braking": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 200
+                        },
+                        "rapid_acceleration": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 200
+                        },
+                        "sharp_cornering": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 200
+                        }
+                    }
+                },
+                "harsh_braking": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "rapid_acceleration": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "sharp_cornering": {
+                    "type": [
+                        "boolean",
+                        "null"
+                    ]
+                },
+                "sensor": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                }
+            }
+        },
+        "driver_session": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "driver_id": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 160
+                },
+                "started_at": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "date-time",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+                },
+                "ended_at": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "date-time",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+                },
+                "session_id": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "uuid"
+                },
+                "status": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "active",
+                        "ended",
+                        "inactive",
+                        "unknown",
+                        null
+                    ]
+                }
+            }
+        },
+        "message_type": {
+            "const": "telemetry"
+        },
+        "event_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+        }
+    }
+}

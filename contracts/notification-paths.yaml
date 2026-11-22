@@ -1,0 +1,132 @@
+paths:
+  /api/v1/organizations/{organization}/notifications:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: List the current user's unarchived notifications
+      description: Only the authenticated user's records in the current organization are returned. Results use descending created_at and ID cursor order.
+      parameters:
+        - {name: type, in: query, schema: {type: string, maxLength: 120}}
+        - {name: severity, in: query, schema: {type: string, maxLength: 24}}
+        - {name: unread, in: query, schema: {type: boolean}}
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: cursor, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: Recipient notifications and a next cursor, if any.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Envelope'}
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items: {type: array, items: {$ref: '#/components/schemas/NotificationItem'}}
+                          unread_count: {type: integer}
+                          pagination:
+                            type: object
+                            properties:
+                              next_cursor: {type: string, nullable: true}
+                              per_page: {type: integer}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/notifications/unread-count:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Count current user's unread, unarchived notifications
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/notifications/{notification}:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {name: notification, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      summary: Update read or archive state of an owned notification
+      description: Read state is per recipient and does not acknowledge or resolve the underlying alert. Supply at least one field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read: {type: boolean}
+                archived: {type: boolean}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/notifications/mark-read:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    post:
+      summary: Mark selected owned notifications read
+      description: Provide either up to 100 explicit IDs or a non-future through_created_at cutoff. Explicit IDs are preferred for exact selection when timestamps are shared.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              oneOf:
+                - {required: [ids]}
+                - {required: [through_created_at]}
+              properties:
+                ids: {type: array, minItems: 1, maxItems: 100, uniqueItems: true, items: {type: string, format: uuid}}
+                through_created_at: {type: string, format: date-time}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/notification-preferences:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Get the current user's preferences in this organization
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    patch:
+      summary: Update the current user's notification preferences
+      description: Quiet-hour boundaries must both be present or both null. Preferences are stored only; email delivery and scheduling are not implemented.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NotificationPreferences'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+components:
+  schemas:
+    NotificationItem:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string}
+        severity: {type: string}
+        title: {type: string}
+        message: {type: string}
+        subject: {type: object, nullable: true}
+        action: {type: object, nullable: true}
+        occurred_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+        read_at: {type: string, format: date-time, nullable: true}
+        archived_at: {type: string, format: date-time, nullable: true}
+        data: {type: object}
+    NotificationPreferences:
+      type: object
+      properties:
+        optional_email_enabled: {type: boolean}
+        locale: {type: string, nullable: true, enum: [en, ms, zh, null]}
+        digest_frequency: {type: string, enum: [none, daily, weekly]}
+        quiet_start: {type: string, nullable: true, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'}
+        quiet_end: {type: string, nullable: true, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'}

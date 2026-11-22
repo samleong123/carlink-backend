@@ -1,0 +1,133 @@
+paths:
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/latest-state:
+    parameters: [{$ref: '#/components/parameters/Organization'}, {$ref: '#/components/parameters/Vehicle'}]
+    get:
+      summary: Latest normalized vehicle, network, health and behavior snapshot
+      description: Requires telemetry.read. Returns nullable sample, freshness and explicit quality. Pi clock quality is unreported; edge behavior flags are unverified, and driver_session cannot authenticate a shift. No data returns sample null.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/diagnostics:
+    parameters: [{$ref: '#/components/parameters/Organization'}, {$ref: '#/components/parameters/Vehicle'}]
+    get:
+      summary: Latest reported fault presence without stored codes
+      description: Requires telemetry.read and active paid access. Codes are stripped before persistence; only MIL/fault presence remains. Unknown or false presence is not proof of a complete ECU scan or confirmed clearance. Use POST dtc-ai for a transient code explanation.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/energy:
+    parameters: [{$ref: '#/components/parameters/Organization'}, {$ref: '#/components/parameters/Vehicle'}]
+    get:
+      summary: Coverage-aware packet fuel-rate integration
+      description: Requires analytics.read. Uses direct rates or MAF only for server-registered petrol vehicles with AFR 14.7 and density 745 g/L. Integrates compatible packet rates over at most 15 seconds with exact clipped boundaries. No usable coverage gives null fuel, not zero. Edge cumulative totals are ignored. CO2 remains null without an approved factor. Does not implement driver or journey energy attribution.
+      parameters: [{$ref: '#/components/parameters/AnalyticsFrom'}, {$ref: '#/components/parameters/AnalyticsTo'}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/coverage:
+    parameters: [{$ref: '#/components/parameters/Organization'}, {$ref: '#/components/parameters/Vehicle'}]
+    get:
+      summary: Cursor-paged GPS and network packet observations
+      description: Requires coverage.read. Raw windows limited to 24 hours. Network sample timing and location alignment are unverified. Missing telemetry is not proof of a dead zone. No grid aggregation or radio-quality classification is inferred.
+      parameters: [{$ref: '#/components/parameters/AnalyticsFrom'}, {$ref: '#/components/parameters/AnalyticsTo'}, {$ref: '#/components/parameters/FoundationPerPage'}, {$ref: '#/components/parameters/FoundationCursor'}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/fleet-states:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Cursor-paged active fleet states and map coordinates
+      description: Requires both dashboard.read and telemetry.read. Never-observed or stale states are explicit. Staleness is not a confirmed device/network outage.
+      parameters: [{$ref: '#/components/parameters/FoundationPerPage'}, {$ref: '#/components/parameters/FoundationCursor'}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/dashboard:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Tenant fleet and processing counts
+      description: Requires dashboard.read. Counts vehicles, observed vehicles, current authorized shifts, active automatic journeys, open alerts and pending telemetry. Does not infer passenger fares or earnings.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/invitations:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Cursor-page invitation history without bearer secrets
+      description: Requires members.manage. Includes accepted, revoked and expired records.
+      parameters:
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {$ref: '#/components/parameters/FoundationCursor'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+    post:
+      summary: Record a mailbox-bound invitation and encrypted mail intent
+      description: Requires members.manage and non-logging mail transport. Owner cannot be granted by invitation. Existing memberships and live duplicate invitations return 409. Matching idempotent replay returns the same ID; mismatched replay returns 409. New invitees get an eligible email-link account, but no tenant membership until explicit authenticated acceptance.
+      parameters:
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 128}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+                role: {type: string, enum: [admin, manager, viewer, safety_officer, maintenance_officer, driver, support, module_vehicle, module_driver, module_dashboard, module_compliance, module_coverage]}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/invitations/{invitation}/revoke:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {name: invitation, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      summary: Revoke an unaccepted invitation
+      description: Requires members.manage. Repeated revocation succeeds; accepted invitations return 409. Worker rechecks revocation before sending mail.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/v1/invitations/accept:
+    post:
+      summary: Explicitly accept a single-use invitation as its authenticated mailbox owner
+      description: Requires an active email-link-authenticated account matching the invited normalized email. The target organization must be active. Existing membership returns 409, wrong mailbox 403, invalid/expired/revoked/consumed token 422. No GET consumes invitation tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string, minLength: 64, maxLength: 64}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+components:
+  parameters:
+    Vehicle: {name: vehicle, in: path, required: true, schema: {type: string, format: uuid}}
+    AnalyticsFrom: {name: from, in: query, required: true, schema: {type: string, format: date-time}, description: Inclusive UTC lower bound.}
+    AnalyticsTo: {name: to, in: query, required: true, schema: {type: string, format: date-time}, description: Exclusive upper bound; greater than from and at most 24 hours later.}

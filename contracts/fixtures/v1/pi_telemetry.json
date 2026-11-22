@@ -1,0 +1,95 @@
+{
+  "message_type": "telemetry",
+  "event_id": "57913b41-48f0-43fd-9729-2b3b09ae5a21",
+  "timestamp": "2026-11-15T12:52:00Z",
+  "gateway": {
+    "device_id": "IOT-001",
+    "vehicle_id": "VEH-001",
+    "edge_version": "1.0.0"
+  },
+  "network": {
+    "modem_model": "SIM7600G-H",
+    "imei": null,
+    "imsi": null,
+    "registered_plmn": "50212",
+    "operator": "Example Operator",
+    "network_type": "LTE",
+    "registration_status": "registered",
+    "roaming": false,
+    "lte_band": 3,
+    "earfcn": 1650,
+    "cell_id": "12345678",
+    "pci": 123,
+    "tac": "3456",
+    "rssi_dbm": -68,
+    "rsrp_dbm": -95,
+    "rsrq_db": -11,
+    "sinr_db": 12.5,
+    "connected": true
+  },
+  "gps": {
+    "latitude": 3.139,
+    "longitude": 101.6869,
+    "altitude_m": 45.2,
+    "speed_kmh": 52.3,
+    "heading_deg": 135.5,
+    "satellites": 12,
+    "hdop": 0.9,
+    "fix_valid": true,
+    "timestamp": "2026-11-15T12:52:00Z"
+  },
+  "vehicle": {
+    "obd_connected": true,
+    "engine_running": true,
+    "engine_rpm": 2100,
+    "speed_kmh": 52,
+    "coolant_temp_c": 87,
+    "engine_load_pct": 37.5,
+    "throttle_pct": 18.0,
+    "intake_temp_c": 34,
+    "maf_gps": 12.5,
+    "fuel_rate_lph": null,
+    "fuel_level_pct": null,
+    "odometer_km": null,
+    "engine_runtime_s": 3600,
+    "ecu_voltage_v": 13.8,
+    "mil_on": false,
+    "dtc_codes": [],
+    "calculated_fuel_consumption": {
+      "rateLph": 4.109026160799891,
+      "rateSource": "maf",
+      "instantL100km": null,
+      "totalLitres": null,
+      "distanceKm": null,
+      "averageL100km": null,
+      "averageKmPerL": null
+    }
+  },
+  "driving_behaviour": {
+    "sensor": "MPU6050",
+    "acceleration": {"x_mps2": 0.2, "y_mps2": 0.8, "z_mps2": 9.8},
+    "gyroscope": {"x_dps": 0.5, "y_dps": 0.2, "z_dps": 1.4},
+    "threshold": {"harsh_braking": null, "rapid_acceleration": null, "sharp_cornering": null},
+    "harsh_braking": false,
+    "rapid_acceleration": false,
+    "sharp_cornering": false
+  },
+  "driver_session": {
+    "session_id": "a71a989d-9352-48ae-a4d8-197f126ae303",
+    "driver_id": "DRV-001",
+    "status": "active",
+    "started_at": "2026-11-15T12:30:00Z",
+    "ended_at": null
+  },
+  "device_health": {
+    "cpu_temp_c": 48.2,
+    "cpu_usage_pct": 23.5,
+    "memory_usage_pct": 42.1,
+    "disk_usage_pct": 32.0,
+    "uptime_s": 18563,
+    "ble_obd_connected": true,
+    "lte_connected": true,
+    "pending_records": 0,
+    "last_sync_at": "2026-11-15T12:51:55Z"
+  }
+}

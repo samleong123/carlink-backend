@@ -1,0 +1,230 @@
+paths:
+  /api/v1/me:
+    patch:
+      summary: Update your personal account details
+      description: Active human account only; versioned self-service display name, locale and IANA timezone. A durable mandatory security email commits with the change. Does not change the authentication email or grant roles. Email copy is currently English; locale is a stored account preference.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [version]
+              properties:
+                version: {type: integer, minimum: 1}
+                display_name: {type: string, maxLength: 160}
+                locale: {type: string, enum: [en, ms, zh]}
+                timezone: {type: string, description: Recognized IANA timezone identifier; default Asia/Kuala_Lumpur.}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}:
+    patch:
+      summary: Update versioned organization metadata
+      description: Requires organizations.write. A stale version returns 409; ownership is changed only through ownership-transfers.
+      parameters: [{$ref: '#/components/parameters/Organization'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version: {type: integer, minimum: 1}
+                name: {type: string, maxLength: 160}
+                contact_email: {type: string, format: email, maxLength: 255, nullable: true}
+                timezone: {type: string, description: Recognized IANA timezone identifier.}
+                default_locale: {type: string, enum: [en, ms, zh]}
+                country_code: {type: string, pattern: '^[A-Z]{2}$', nullable: true}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/settings:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Retrieve versioned typed settings
+      description: Requires settings.read. An absent row has version 1 and empty settings. Values are stored only; offline-state and unidentified-driving evaluators are not implemented.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    patch:
+      summary: Merge typed settings with optimistic concurrency
+      description: Requires settings.write. Unknown setting keys are rejected. Existing keys not supplied are retained; stored values do not claim device configuration delivery.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, settings]
+              properties:
+                version: {type: integer, minimum: 1}
+                settings:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    device_offline_after_s: {type: integer, minimum: 90, maximum: 3600}
+                    unidentified_driving_alert_after_s: {type: integer, minimum: 30, maximum: 3600}
+                    notification_locales: {type: array, minItems: 1, maxItems: 3, items: {type: string, enum: [en, ms, zh]}}
+                    telemetry_interval_seconds: {type: integer, minimum: 2, maximum: 30, description: Must also meet paid-plan minimum interval. Publish signed vehicle configuration separately.}
+                    harsh_braking_ms2: {type: number, minimum: 0.5, maximum: 20, description: Requires safety plan feature.}
+                    rapid_acceleration_ms2: {type: number, minimum: 0.5, maximum: 20, description: Requires safety plan feature.}
+                    maf_air_fuel_ratio: {type: number, minimum: 5, maximum: 30, description: Petrol MAF fallback default 14.7.}
+                    maf_fuel_density_g_per_litre: {type: number, minimum: 500, maximum: 1000, description: Petrol MAF fallback default 745 g/litre.}
+                    email_digest_hour: {type: integer, minimum: 0, maximum: 23, default: 8, description: Generate after this hour in organization timezone; prior completed day only.}
+                    email_weekly_iso_day: {type: integer, minimum: 1, maximum: 7, default: 1, description: 1 Monday to 7 Sunday; seven completed local days.}
+                    email_subscription_warning_days: {type: integer, minimum: 0, maximum: 365, default: 30}
+                    email_organization_daily: {type: boolean, default: true}
+                    email_driver_daily: {type: boolean, default: true}
+                    email_driver_weekly: {type: boolean, default: true}
+                    email_score_changes: {type: boolean, default: true, description: Daily retained-history score comparison; never a calibrated safety finding. Account/security notices cannot be disabled.}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/members:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Cursor-page tenant members and their current permissions
+      description: Requires members.read. Returns membership ID, user ID, legacy primary role, status, version and effective permission keys. This is not an invitation endpoint.
+      parameters:
+        - {$ref: '#/components/parameters/FoundationPerPage'}
+        - {$ref: '#/components/parameters/FoundationCursor'}
+      responses:
+        '200': {$ref: '#/components/responses/FoundationPage'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/members/{membership}:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {name: membership, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      summary: Update a tenant member's status or role assignments
+      description: Requires members.manage and the current version. The first role is the legacy primary role; effective grants are the union. Granting/removing owner roles uses ownership-transfers. Owner status changes additionally require ownership.transfer, email-link verification within 10 minutes, and another active owner. Target IDs are tenant-scoped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version: {type: integer, minimum: 1}
+                status: {type: string, enum: [active, suspended, removed]}
+                roles: {type: array, minItems: 1, maxItems: 8, uniqueItems: true, items: {type: string, description: Existing role code. Owner transitions require the dedicated endpoint.}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/ownership-transfers:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    post:
+      summary: Atomically transfer ownership to an active tenant member
+      description: Requires ownership.transfer and a stateful session verified through an email link within 10 minutes. Target version must match. The target becomes owner, initiator becomes admin, and additional roles on those two memberships are cleared. Passwords and OAuth are not supported.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membership_id, version]
+              properties:
+                membership_id: {type: string, format: uuid}
+                version: {type: integer, minimum: 1, description: Target membership version.}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/request-logs:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Query this tenant's HTTP lifecycle projections
+      description: Requires request_logs.read. Half-open UTC window is limited to 31 days. Only authenticated tenant-associated rows are returned; context contains bounded untrusted browser claims and never raw request bodies, URLs or secrets.
+      parameters: &logWindow
+        - {$ref: '#/components/parameters/FoundationFrom'}
+        - {$ref: '#/components/parameters/FoundationTo'}
+        - {$ref: '#/components/parameters/FoundationPerPage'}
+        - {$ref: '#/components/parameters/FoundationCursor'}
+      responses: &queryResponses
+        '200': {$ref: '#/components/responses/FoundationPage'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/audit-logs:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: Query this tenant's delivered action records
+      description: Requires audit.read. Window is limited to 31 days. Committed outbox actions may not be visible until delivery; lack of a delivered row does not prove that no mutation happened.
+      parameters: *logWindow
+      responses: *queryResponses
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/telemetry:
+    parameters: &telemetryPath
+      - {$ref: '#/components/parameters/Organization'}
+      - {name: vehicle, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      summary: Cursor-page normalized vehicle telemetry
+      description: Requires telemetry.read. Half-open UTC window is limited to 24 hours. Returned speed/RPM/GPS values are nullable; unusable clocks, stale or installation-mismatched observations are not presented as valid measurements. The inbox stores privacy-sanitized JSON, not original replay bytes; the original wire SHA-256 is retained. DTC codes are never persisted.
+      parameters: *logWindow
+      responses: *queryResponses
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/positions:
+    parameters: *telemetryPath
+    get:
+      summary: Cursor-page raw position samples with explicit gaps
+      description: Requires telemetry.read and a window no wider than 24 hours. This implementation does not downsample or interpolate a map trace. Null positions remain gaps; it does not infer positions from packet timestamps.
+      parameters: *logWindow
+      responses: *queryResponses
+components:
+  parameters:
+    FoundationFrom: {name: from, in: query, required: true, schema: {type: string, format: date-time}, description: Inclusive start.}
+    FoundationTo: {name: to, in: query, required: true, schema: {type: string, format: date-time}, description: Exclusive end strictly after from.}
+    FoundationPerPage: {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+    FoundationCursor: {name: cursor, in: query, schema: {type: string, maxLength: 512}}
+  responses:
+    FoundationPage:
+      description: Successful bounded cursor page within the unchanged seven-field envelope.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - {$ref: '#/components/schemas/Envelope'}
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    required: [items, pagination, links]
+                    properties:
+                      items: {type: array, items: {type: object}}
+                      pagination:
+                        type: object
+                        required: [per_page, next_cursor]
+                        properties:
+                          per_page: {type: integer, minimum: 1, maximum: 200}
+                          next_cursor: {type: string, nullable: true}
+                      links:
+                        type: object
+                        properties:
+                          next: {type: string, nullable: true}

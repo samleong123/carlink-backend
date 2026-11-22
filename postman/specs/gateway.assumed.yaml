@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Payment gateway example for local testing
+  version: 0.1.0
+  description: The shape is based on an example supplied by the user; example values are synthetic and the live provider has not been tested.
+paths:
+  /api/generateLink:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token, payee_name, transaction_details, amount, limit, type, redirect_url]
+              properties:
+                token: {type: string}
+                payee_name: {type: string}
+                transaction_details: {type: string}
+                amount: {type: string}
+                limit: {type: integer}
+                type: {type: string, enum: [card]}
+                redirect_url: {type: string, format: uri}
+      responses:
+        '200':
+          description: JSON response shaped from the user's example; field guarantees still require provider verification.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: integer}
+                  title: {type: string}
+                  message: {type: string}
+                  data:
+                    type: object
+                    properties:
+                      link: {type: string, format: uri}
+                      id: {type: integer}
+                      payee_name: {type: string}
+                      transaction_details: {type: string}
+                      generated_date: {type: string}
+                      transaction_currency: {type: string}
+                      sale_amount: {type: string}
+                      redirect_url: {type: string, format: uri}
+                      limit: {type: string}
+                      type: {type: string}
+                      gateway_id: {type: string}
+              example:
+                status: 200
+                title: Payment Link Generated
+                message: Synthetic payment link generated.
+                data:
+                  link: https://gateway.samsam123.name.my/index.html?data=syntheticcheckout
+                  id: 42
+                  payee_name: Example Fleet
+                  transaction_details: Monthly subscription
+                  generated_date: '2026-11-16 10:45:41'
+                  transaction_currency: MYR
+                  sale_amount: '10.00'
+                  redirect_url: https://api.example.test/secret-callback
+                  limit: '1'
+                  type: card
+                  gateway_id: simulation-transaction-001

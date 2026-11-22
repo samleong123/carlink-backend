@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true">
+ <testsuites><testsuite name="Feature"><directory>tests/Feature</directory></testsuite><testsuite name="Unit"><directory>tests/Unit</directory></testsuite></testsuites>
+ <php>
+  <!-- Never inherit a deployment database, mailer, session or key for ordinary tests. -->
+  <env name="APP_ENV" value="testing" force="true"/>
+  <env name="APP_KEY" value="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" force="true"/>
+  <env name="APP_CONFIG_CACHE" value="storage/framework/cache/phpunit-only-config.php" force="true"/>
+  <env name="DB_CONNECTION" value="sqlite" force="true"/>
+  <env name="DB_DATABASE" value=":memory:" force="true"/>
+  <env name="DB_URL" value="" force="true"/>
+  <!-- Legacy regression fixtures predate subscriptions and managed device registration. New SaaS tests explicitly enable both. -->
+  <env name="SAAS_ENFORCE_SUBSCRIPTIONS" value="false" force="true"/>
+  <env name="SAAS_MANAGED_DEVICES" value="false" force="true"/>
+  <env name="CACHE_STORE" value="array" force="true"/>
+  <env name="SESSION_DRIVER" value="array" force="true"/>
+  <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+  <env name="MAIL_MAILER" value="array" force="true"/>
+  <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost:3000,127.0.0.1:3000" force="true"/>
+  <env name="REQUEST_LOG_SPOOL_PATH" value="/tmp/carlink-phpunit-request-log-spool.ndjson" force="true"/>
+  <env name="RABBITMQ_MANAGEMENT_URL" value="" force="true"/>
+ </php>
+</phpunit>

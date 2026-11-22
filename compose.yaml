@@ -1,0 +1,109 @@
+name: carlink
+x-app: &app
+  build:
+    context: .
+    dockerfile: deploy/Dockerfile
+  image: carlink-app:local
+  env_file: .env
+  restart: unless-stopped
+  environment:
+    DB_HOST: postgres
+    LOG_DB_HOST: postgres
+    REDIS_HOST: redis
+    RABBITMQ_HOST: rabbitmq
+    RABBITMQ_TLS_CA_FILE: /etc/carlink/broker-tls/ca.pem
+  volumes:
+    - app-storage:/var/www/html/storage
+    - ./deploy/tls/broker/ca.pem:/etc/carlink/broker-tls/ca.pem:ro
+  depends_on:
+    postgres: {condition: service_healthy}
+    redis: {condition: service_healthy}
+  stop_grace_period: 150s
+services:
+  app:
+    <<: *app
+  worker:
+    <<: *app
+    command: [php, artisan, 'queue:work', redis, '--queue=auth-mail,notifications,default', '--sleep=1', '--tries=3', '--timeout=60', '--max-time=3600']
+  scheduler:
+    <<: *app
+    command: [php, artisan, 'schedule:work']
+  telemetry-consumer:
+    <<: *app
+    profiles: [broker]
+    command: [php, artisan, 'telemetry:consume']
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  events-consumer:
+    <<: *app
+    profiles: [broker]
+    command: [php, artisan, 'device-events:consume']
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  nginx:
+    build: {context: ., dockerfile: deploy/nginx.Dockerfile}
+    restart: unless-stopped
+    environment: {API_HOST: '${API_HOST:?Set API_HOST in deploy/compose.env}'}
+    ports: ['80:80', '443:443']
+    volumes: ['./deploy/tls/web:/etc/carlink/tls:ro']
+    depends_on: [app, rabbitmq]
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: '${POSTGRES_USER:?Set a distinct bootstrap database user}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?Set a random bootstrap password}'
+      DB_USERNAME: '${DB_USERNAME:?Set an application database user}'
+      DB_PASSWORD: '${DB_PASSWORD:?Set an application database password}'
+      DB_DATABASE: '${DB_DATABASE:?Set the application database name}'
+      LOG_DB_USERNAME: '${LOG_DB_USERNAME:?Set a distinct logging database user}'
+      LOG_DB_PASSWORD: '${LOG_DB_PASSWORD:?Set a logging database password}'
+      LOG_DB_DATABASE: '${LOG_DB_DATABASE:?Set the logging database name}'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-carlink.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    environment: {REDIS_PASSWORD: '${REDIS_PASSWORD:?Set a random Redis password}'}
+    command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$${REDIS_PASSWORD}" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    hostname: rabbitmq
+    restart: unless-stopped
+    ports: ['127.0.0.1:15672:15672']
+    environment:
+      RABBITMQ_DEFAULT_VHOST: carlink
+      RABBITMQ_DEFAULT_USER: '${RABBITMQ_DEFAULT_USER:?Set the broker operator user}'
+      RABBITMQ_DEFAULT_PASS: '${RABBITMQ_DEFAULT_PASS:?Set the broker operator password}'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./deploy/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./deploy/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./deploy/tls/broker:/etc/carlink/tls:ro
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+volumes:
+  app-storage:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:

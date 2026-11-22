@@ -1,0 +1,236 @@
+paths:
+  /api/v1/organizations/{organization}/maintenance-plans:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: List maintenance plans
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      summary: Create a maintenance plan with its first immutable revision
+      description: Requires maintenance.write. Calendar and estimated-distance thresholds create durable occurrences. Enabled in_app channels create inbox records; email channels queue HTML reminders for currently authorized maintenance staff. Per evaluation, only the highest newly crossed stage is emailed. Missing thresholds default to a 30-day calendar warning and a due threshold; existing cycle snapshots are unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MaintenancePlanCreate'}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance-plans/{plan}:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenancePlan'}
+    get:
+      summary: Get a plan and immutable revisions
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance-plans/{plan}/revisions:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenancePlan'}
+    post:
+      summary: Add a plan revision for subsequent service cycles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MaintenanceRevision'}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/maintenance-plan-assignments:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceVehicle'}
+    post:
+      summary: Assign a plan to a vehicle
+      description: Requires maintenance.write. Pre-monitoring service usage remains unknown unless an explicit attested carry-in is supplied. Carry-in requires service time, an as-of time no earlier than service, and a reason.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id]
+              properties:
+                plan_id: {type: string, format: uuid}
+                last_serviced_at: {type: string, format: date-time, nullable: true}
+                carry_in_distance_m: {type: integer, minimum: 0, maximum: 10000000000, nullable: true}
+                carry_in_as_of: {type: string, format: date-time, nullable: true}
+                carry_in_reason: {type: string, minLength: 3, maxLength: 500, nullable: true}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/maintenance:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceVehicle'}
+    get:
+      summary: View vehicle service cycles and calendar due dates
+      description: Requires maintenance.read. Calendar dates use the organization's time zone and clamp month ends. Usage integrates partial speed trapezoids at service boundaries and is an estimated lower bound, never complete mileage. remaining_km is null for an unknown baseline.
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/vehicles/{vehicle}/service-records:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceVehicle'}
+    get:
+      summary: List immutable vehicle service records
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance/work-orders:
+    parameters: [{$ref: '#/components/parameters/Organization'}]
+    get:
+      summary: List work orders
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      summary: Create a work order for selected vehicle plan assignments
+      description: An open order cannot duplicate a service cycle.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicle_id, number, assignment_ids]
+              properties:
+                vehicle_id: {type: string, format: uuid}
+                number: {type: string, maxLength: 80}
+                assignment_ids: {type: array, minItems: 1, maxItems: 30, uniqueItems: true, items: {type: string, format: uuid}}
+                scheduled_at: {type: string, format: date-time, nullable: true}
+                workshop_name: {type: string, maxLength: 160, nullable: true}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance/work-orders/{order}:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceOrder'}
+    get:
+      summary: Get work order and item IDs
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance/work-orders/{order}/start:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceOrder'}
+    post:
+      summary: Begin an order in draft or scheduled state
+      requestBody: {$ref: '#/components/requestBodies/MaintenanceVersion'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance/work-orders/{order}/cancel:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceOrder'}
+    post:
+      summary: Cancel an open order without resetting a service cycle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, reason]
+              properties:
+                version: {type: integer, minimum: 1}
+                reason: {type: string, maxLength: 500}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/v1/organizations/{organization}/maintenance/work-orders/{order}/complete:
+    parameters:
+      - {$ref: '#/components/parameters/Organization'}
+      - {$ref: '#/components/parameters/MaintenanceOrder'}
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: {type: string, minLength: 8, maxLength: 255}
+    post:
+      summary: Complete selected order items and advance their service cycles
+      description: Requires maintenance.complete. Same-key/body retries are idempotent; changed input conflicts. Only selected cycles advance; their open alerts resolve and post-service usage is reevaluated. Odometer readings are attested evidence, not a verified ledger. Service older than the active baseline requires unimplemented reconciliation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, performed_at, odometer_km, odometer_source, workshop_name, completed_item_ids]
+              properties:
+                version: {type: integer, minimum: 1}
+                performed_at: {type: string, format: date-time}
+                odometer_km: {type: number, minimum: 0, maximum: 1000000000}
+                odometer_source: {type: string, maxLength: 100}
+                workshop_name: {type: string, maxLength: 160}
+                completed_item_ids: {type: array, minItems: 1, maxItems: 30, uniqueItems: true, items: {type: string, format: uuid}}
+                cost_minor: {type: integer, minimum: 0, nullable: true, description: Cost stored once on the first completed item.}
+                currency: {type: string, pattern: '^[A-Z]{3}$', nullable: true}
+                notes: {type: string, maxLength: 4000, nullable: true}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+components:
+  parameters:
+    MaintenancePlan: {name: plan, in: path, required: true, schema: {type: string, format: uuid}}
+    MaintenanceVehicle: {name: vehicle, in: path, required: true, schema: {type: string, format: uuid}}
+    MaintenanceOrder: {name: order, in: path, required: true, schema: {type: string, format: uuid}}
+  requestBodies:
+    MaintenanceVersion:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [version]
+            properties:
+              version: {type: integer, minimum: 1}
+  schemas:
+    MaintenanceRevision:
+      type: object
+      required: [interval]
+      properties:
+        interval:
+          type: object
+          required: [due_when]
+          description: At least one metric is required; use months or days, not both.
+          properties:
+            distance_km: {type: number, exclusiveMinimum: true, minimum: 0, maximum: 100000000, nullable: true}
+            calendar_months: {type: integer, minimum: 1, maximum: 1200, nullable: true}
+            calendar_days: {type: integer, minimum: 1, maximum: 36500, nullable: true}
+            due_when: {type: string, enum: [any]}
+        thresholds:
+          type: array
+          minItems: 1
+          maxItems: 32
+          description: Optional; defaults to 30-day calendar warning and due-point alerts with in_app/email channels. Unique keys; thresholds progress towards due without decreasing severity. At least one enabled interval metric must be specified.
+          items:
+            type: object
+            required: [key, severity, match, channels]
+            properties:
+              key: {type: string, pattern: '^[A-Za-z0-9_-]{1,64}$'}
+              severity: {type: string, enum: [info, warning, high, critical]}
+              remaining_km_lte: {type: number, nullable: true}
+              remaining_days_lte: {type: integer, nullable: true}
+              match: {type: string, enum: [any, all]}
+              channels: {type: array, minItems: 1, items: {type: string, enum: [in_app, email]}}
+    MaintenancePlanCreate:
+      allOf:
+        - {$ref: '#/components/schemas/MaintenanceRevision'}
+        - type: object
+          required: [name, service_type]
+          properties:
+            name: {type: string, maxLength: 160}
+            service_type: {type: string, maxLength: 80}

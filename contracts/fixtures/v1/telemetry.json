@@ -1,0 +1,234 @@
+{
+  "schema_version": "1.0",
+  "message_type": "telemetry",
+  "event_id": "99999999-9999-4999-8999-999999999999",
+  "device_id": "44444444-4444-4444-8444-444444444444",
+  "installation_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "boot_id": "55555555-5555-4555-8555-555555555555",
+  "sequence": 42,
+  "occurred_at": "2026-11-15T04:30:05.000Z",
+  "sent_at": "2026-11-15T04:30:05.200Z",
+  "uptime_ms": 125000,
+  "edge_version": "1.0.0",
+  "config_version": 12,
+  "clock": {
+    "source": "gnss",
+    "synchronized": true,
+    "estimated_error_ms": 100
+  },
+  "payload": {
+    "driver_context": {
+      "shift_id": "77777777-7777-4777-8777-777777777777",
+      "local_session_id": "66666666-6666-4666-8666-666666666666",
+      "authorization_version": 7
+    },
+    "gps": {
+      "observed_at": "2026-11-15T04:30:05.000Z",
+      "fix_valid": true,
+      "latitude": 3.139,
+      "longitude": 101.6869,
+      "altitude_m": 45.2,
+      "speed_kmh": 52.3,
+      "heading_deg": 135.5,
+      "satellites": 12,
+      "hdop": 0.9,
+      "horizontal_accuracy_m": 5.0,
+      "quality": "valid",
+      "sample_id": "5b7db89a-220d-539a-a2ba-d95cf45aa70f",
+      "observed_uptime_ms": 125000
+    },
+    "vehicle": {
+      "obd_connected": true,
+      "engine_state": {
+        "value": "running",
+        "source": "rpm",
+        "observed_at": "2026-11-15T04:30:04.700Z",
+        "quality": "estimated",
+        "sample_id": "39a55ac3-247b-5b3e-a4b6-90786bf57bd6",
+        "observed_uptime_ms": 124700
+      },
+      "speed_kmh": {
+        "value": 52,
+        "observed_at": "2026-11-15T04:30:04.900Z",
+        "quality": "valid",
+        "pid": "010D",
+        "ecu": "7E8",
+        "sample_id": "e16ace7b-a318-5496-bbd4-9c191b2b72d9",
+        "observed_uptime_ms": 124900
+      },
+      "engine_rpm": {
+        "value": 2100,
+        "observed_at": "2026-11-15T04:30:04.700Z",
+        "quality": "valid",
+        "pid": "010C",
+        "ecu": "7E8",
+        "sample_id": "bdd36f82-45d4-522f-bf31-ec64e7e3c612",
+        "observed_uptime_ms": 124700
+      },
+      "coolant_temp_c": {
+        "value": 87,
+        "observed_at": "2026-11-15T04:30:02.000Z",
+        "quality": "valid",
+        "pid": "0105",
+        "ecu": "7E8",
+        "sample_id": "a520cadb-9b6f-53a8-999e-fdce53d7904e",
+        "observed_uptime_ms": 122000
+      },
+      "engine_load_pct": {
+        "value": 37.5,
+        "observed_at": "2026-11-15T04:30:02.100Z",
+        "quality": "valid",
+        "pid": "0104",
+        "ecu": "7E8",
+        "sample_id": "df3a2769-2102-534c-9986-96a6100739ae",
+        "observed_uptime_ms": 122100
+      },
+      "throttle_pct": {
+        "value": 18.0,
+        "observed_at": "2026-11-15T04:30:04.500Z",
+        "quality": "valid",
+        "pid": "0111",
+        "ecu": "7E8",
+        "sample_id": "e348cbd7-d03c-51b6-9557-4758470e1167",
+        "observed_uptime_ms": 124500
+      },
+      "intake_temp_c": {
+        "value": 34,
+        "observed_at": "2026-11-15T04:30:02.200Z",
+        "quality": "valid",
+        "pid": "010F",
+        "ecu": "7E8",
+        "sample_id": "c58b4917-2684-5f30-9918-782a0368970e",
+        "observed_uptime_ms": 122200
+      },
+      "maf_gps": {
+        "value": 12.5,
+        "observed_at": "2026-11-15T04:30:04.800Z",
+        "quality": "valid",
+        "pid": "0110",
+        "ecu": "7E8",
+        "sample_id": "4a655bf9-d352-54e6-a169-76be17106452",
+        "observed_uptime_ms": 124800
+      },
+      "fuel_rate_lph": {
+        "value": null,
+        "observed_at": "2026-11-15T04:30:02.300Z",
+        "quality": "unsupported",
+        "pid": "015E",
+        "ecu": "7E8",
+        "sample_id": "40ecc86e-05a9-53a1-9c89-91fc6ec99e65",
+        "observed_uptime_ms": 122300
+      },
+      "fuel_level_pct": {
+        "value": null,
+        "observed_at": "2026-11-15T04:30:02.400Z",
+        "quality": "unavailable",
+        "pid": "012F",
+        "ecu": "7E8",
+        "sample_id": "3405e110-fd20-5362-9e13-0d3d3f7da1bd",
+        "observed_uptime_ms": 122400
+      },
+      "odometer_km": {
+        "value": null,
+        "observed_at": null,
+        "quality": "unsupported",
+        "source": null,
+        "sample_id": null,
+        "observed_uptime_ms": null
+      },
+      "engine_runtime_s": {
+        "value": 3600,
+        "observed_at": "2026-11-15T04:30:02.500Z",
+        "quality": "valid",
+        "pid": "011F",
+        "ecu": "7E8",
+        "sample_id": "6a1f4cae-7cd3-5123-8c15-f5da2c86fe4d",
+        "observed_uptime_ms": 122500
+      },
+      "ecu_voltage_v": {
+        "value": 13.8,
+        "observed_at": "2026-11-15T04:30:02.600Z",
+        "quality": "valid",
+        "pid": "0142",
+        "ecu": "7E8",
+        "sample_id": "d6e7c4b7-9c59-5eb8-8ca0-c4c90a5d5885",
+        "observed_uptime_ms": 122600
+      },
+      "mil_on": {
+        "value": false,
+        "observed_at": "2026-11-15T04:30:02.700Z",
+        "quality": "valid",
+        "pid": "0101",
+        "ecu": "7E8",
+        "sample_id": "06c8cd79-e4b7-530c-ab6c-d59b388e64df",
+        "observed_uptime_ms": 122700
+      }
+    },
+    "network": {
+      "observed_at": "2026-11-15T04:30:00.000Z",
+      "modem_model": "SIM7600G-H",
+      "registered_plmn": "50212",
+      "operator": "Example Operator",
+      "network_type": "LTE",
+      "registration_status": "registered",
+      "roaming": false,
+      "lte_band": 3,
+      "earfcn": 1650,
+      "cell_id": "12345678",
+      "pci": 123,
+      "tac": "3456",
+      "rssi_dbm": -68,
+      "rsrp_dbm": -95,
+      "rsrq_db": -11,
+      "sinr_db": 12.5,
+      "data_connected": true,
+      "quality": "valid",
+      "sample_id": "231eb5c2-ae66-5540-abd6-b662c1eab199",
+      "observed_uptime_ms": 120000
+    },
+    "imu_summary": {
+      "observed_at": "2026-11-15T04:30:05.000Z",
+      "sensor": "MPU6050",
+      "sample_rate_hz": 50,
+      "calibration_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "coordinate_frame": "vehicle_x_forward_y_left_z_up",
+      "gravity_removed": true,
+      "linear_acceleration_mps2": {
+        "x": 0.2,
+        "y": 0.8,
+        "z": 0.0
+      },
+      "gyroscope_dps": {
+        "x": 0.5,
+        "y": 0.2,
+        "z": 1.4
+      },
+      "quality": "valid",
+      "sample_id": "6f0cdc23-5774-53ad-9c15-91a4d9cb2b92",
+      "observed_uptime_ms": 125000
+    },
+    "edge_estimates": {
+      "fuel_rate_lph": 4.109,
+      "fuel_rate_source": "maf_petrol",
+      "fuel_model_version": "petrol-maf-v1",
+      "counter_epoch": "55555555-5555-4555-8555-555555555555",
+      "cumulative_fuel_l": 0.125,
+      "cumulative_distance_m": 850,
+      "covered_seconds": 100,
+      "unknown_seconds": 25
+    },
+    "device_health": {
+      "cpu_temp_c": 48.2,
+      "cpu_usage_pct": 23.5,
+      "memory_usage_pct": 42.1,
+      "disk_usage_pct": 32.0,
+      "uptime_s": 125,
+      "ble_obd_connected": true,
+      "lte_connected": true,
+      "pending_records": 0,
+      "dropped_records_total": 0,
+      "last_application_ack_at": "2026-11-15T04:30:01.000Z"
+    }
+  },
+  "configuration_revision_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+}

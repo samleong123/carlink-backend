@@ -1,0 +1,119 @@
+paths:
+  /api/v1/public/plans:
+    get:
+      security: []
+      summary: Discover purchasable subscription plans
+      description: Public, rate limited. Up to 200 active positive-priced MYR plans, ordered by price/id; no provider credentials or inactive plans. Price is in minor units. No free/default plans are invented. payment_window_hours is 12.
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/auth/signup-links:
+    post:
+      security: []
+      summary: Request email-first organization signup confirmation
+      description: Rate limited and enumeration-safe. Creates a mailbox identity if unknown, but no organization/membership/authority before explicit confirmation. Optional organization contains the reviewed signup details and requires Idempotency-Key; encrypted backend intent expires after 10 minutes. Exact key replay queues no new email and cannot change the draft. Explicit single-use magic-links/consume rechecks plan/version and transactionally creates owner, organization and invoice; returns /signup?signup=UUID&checkout=1. No charge occurs during confirmation. Email-only legacy onboarding remains supported. Suspended accounts remain ineligible. Accepted is not delivery. Credentialed CORS and CSRF required.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Required when organization is supplied. Replays never replace the encrypted draft or send another email.
+          schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignupLinkRequest' }
+      responses:
+        '202': { $ref: '#/components/responses/Success' }
+        '419': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/organization-signups:
+    get:
+      summary: Reconcile the current account's latest organization signup
+      description: Active authenticated account only. Returns signup and invoice (null when absent/deleted). Signup includes id, organization_id, invoice_id, status pending/paid/deleted, fixed payment_due_at, deadline_passed, paid_at and deleted_at. No request hashes. Invoice includes server-priced plan_snapshot but no checkout bearer URL. Deleted tombstones never restore tenant access.
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Create an organization with an initial plan invoice
+      description: >-
+        Active authenticated account; new creation requires email-link verification within 10 minutes. Owner role is assigned to the authenticated user, never a body-supplied identity. Server locks user and selected plan, checks plan_version, sets the price/snapshot and a fixed 12-hour deadline. One pending signup/account, at most 3 creations/day. Pending organization is billing-only regardless of subscription feature flags. No charge/subscription activation occurs here. Exact payload/key replay returns original signup, even a deleted tombstone, without extending the deadline; edited key reuse is 409. After deadline, no checkout or settlement is permitted; scheduled child-first permanent deletion retains separate encrypted financial and audit evidence. Existing organizations and all paid signups are excluded. Provider links cannot be cancelled: late callbacks require operator reconciliation and never resurrect the tenant.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrganizationSignupCreate' }
+      responses:
+        '201': { $ref: '#/components/responses/Success' }
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '419': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /api/v1/organization-signups/{signup}:
+    get:
+      summary: Reconcile a signup owned by the current account
+      description: Same safe data as the latest signup endpoint; another account's ID returns 404, including deleted tombstones.
+      parameters:
+        - { name: signup, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /api/v1/platform/signup-archives:
+    get:
+      summary: List permanently deleted unpaid signup financial archives
+      description: Independent active SaaS admin only. Cursor-paginated signup tombstones with payments_requiring_reconciliation counts. Not tenant-accessible. Financial archives and action audits have no organization FK and survive permanent tenant deletion.
+      parameters:
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 512 } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /api/v1/platform/signup-archives/{signup}:
+    get:
+      summary: Inspect archived signup invoices and late-payment evidence
+      description: Independent active SaaS admin only. Decrypts retained organization billing identity, invoice/plan snapshots, original payment/events, mail delivery metadata and subscription, plus post-deletion events and reconciliation_required payment markers. Never exposes callback hashes or checkout URLs. Late callbacks/provider responses are evidence for manual provider/bank reconciliation, not a refund or a replacement payment API. Keep APP_KEY and backups available to decrypt financial archives.
+      parameters:
+        - { name: signup, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  schemas:
+    SignupLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        return_to: { type: string, maxLength: 255, default: /signup, description: Relative application destination; no external URLs or control characters. }
+        organization: { $ref: '#/components/schemas/OrganizationSignupCreate' }
+    OrganizationSignupCreate:
+      type: object
+      additionalProperties: false
+      required: [name, timezone, default_locale, plan_id, plan_version, accept_unpaid_deletion]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        timezone: { type: string, description: Valid IANA timezone. }
+        default_locale: { type: string, enum: [en, ms, zh] }
+        plan_id: { type: string, format: uuid }
+        plan_version: { type: integer, minimum: 1 }
+        accept_unpaid_deletion: { type: boolean, enum: [true] }

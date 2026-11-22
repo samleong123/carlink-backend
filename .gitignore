@@ -1,0 +1,56 @@
+# Dependencies & local tooling
+/vendor
+/node_modules
+
+# Environment & credentials
+/.env
+/.env.*
+!/.env.example
+/deploy/compose.env
+/deploy/*.env
+/deploy/tls/
+/deploy/secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Storage, logs & framework caches
+/storage/*.key
+/storage/logs/*
+!/storage/logs/.gitignore
+/storage/app/private/*
+!/storage/app/private/.gitignore
+/storage/framework/cache/*
+!/storage/framework/cache/.gitignore
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/testing/
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/bootstrap/cache/*.php
+*.sqlite
+*.log
+
+# Test caches
+/.phpunit.cache
+/.phpunit.result.cache
+
+# macOS, Windows & editor metadata
+.DS_Store
+**/.DS_Store
+__MACOSX/
+**/__MACOSX/
+._*
+.AppleDouble/
+.LSOverride
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
