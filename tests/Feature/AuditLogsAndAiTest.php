@@ -299,15 +299,24 @@ class AuditLogsAndAiTest extends TestCase
             ],
         ]);
 
-        Http::fake(fn () => Http::response([
-            'candidates' => [[
-                'content' => [
-                    'parts' => [
-                        ['text' => "```json\n{$geminiJson}\n```"],
+        $fakeMode = 'ok';
+        Http::fake(function () use (&$fakeMode, $geminiJson) {
+            if ($fakeMode === 'error_500') {
+                return Http::response(['error' => ['message' => 'bad']], 500);
+            }
+            if ($fakeMode === 'error_503') {
+                return Http::response(['error' => ['message' => 'capacity']], 503);
+            }
+            return Http::response([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [
+                            ['text' => "```json\n{$geminiJson}\n```"],
+                        ],
                     ],
-                ],
-            ]],
-        ]));
+                ]],
+            ]);
+        });
 
         $res = $this->actingAs($owner)
             ->postJson("/api/v1/organizations/{$org->id}/audit-ai", [
@@ -330,10 +339,19 @@ class AuditLogsAndAiTest extends TestCase
         });
 
         // Provider error and missing API key checks.
-        Http::fake(fn () => Http::response(['error' => ['message' => 'bad']], 500));
+        $fakeMode = 'error_500';
         $this->actingAs($owner)
             ->postJson("/api/v1/organizations/{$org->id}/audit-ai", ['audit_ids' => [$audit1]])
-            ->assertStatus(502);
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
+
+        $fakeMode = 'error_503';
+        $this->actingAs($owner)
+            ->postJson("/api/v1/organizations/{$org->id}/audit-ai", ['audit_ids' => [$audit1]])
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
 
         config(['dtc_ai.key' => '']);
         $this->actingAs($owner)

@@ -42,6 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 try { \Illuminate\Support\Facades\Log::warning('Private file dependency unavailable',['request_id'=>$request->attributes->get('request_id')]+$e->diagnosticContext()); }
                 catch (\Throwable $loggingError) { /* Do not replace the original dependency failure. */ }
             }
+            if ($e instanceof \App\Exceptions\AiProviderUnavailable) {
+                $message = $e->getMessage();
+                $data['error']['code'] = $e->reasonCode;
+            }
             if ($e instanceof ValidationException) { $data['error']['fields'] = $e->errors(); $data['errors'] = $e->errors(); }
             $response = ApiResponse::error($request, 'Request Failed', $message, $status, $data);
             if ($e instanceof HttpExceptionInterface) foreach ($e->getHeaders() as $name => $value) $response->headers->set($name, $value);

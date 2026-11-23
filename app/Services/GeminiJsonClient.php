@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiProviderUnavailable;
 use Illuminate\Support\Facades\{Http, Log};
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class GeminiJsonClient
 {
@@ -49,7 +51,7 @@ class GeminiJsonClient
 
         try {
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
-            $timeout = max(10, min(95, (int) config('dtc_ai.timeout', 90)));
+            $timeout = max(10, min(45, (int) config('dtc_ai.timeout', 45)));
 
             $response = Http::withHeaders(['x-goog-api-key' => $key])
                 ->acceptJson()
@@ -74,12 +76,12 @@ class GeminiJsonClient
                     'provider_status' => is_array($err) ? ($err['status'] ?? null) : null,
                     'provider_message' => is_array($err) ? ($err['message'] ?? null) : null,
                 ]);
-                abort(502, "{$featureLabel} provider returned an error.");
+                throw new AiProviderUnavailable(AiProviderUnavailable::CAPACITY_MESSAGE, 502, 'GEMINI_CAPACITY_ISSUE');
             }
 
             $payload = $response->json();
             if (!is_array($payload)) {
-                abort(502, "{$featureLabel} provider returned non-JSON response.");
+                throw new AiProviderUnavailable(AiProviderUnavailable::CAPACITY_MESSAGE, 502, 'GEMINI_CAPACITY_ISSUE');
             }
 
             $chunks = array_is_list($payload) ? $payload : [$payload];
@@ -93,16 +95,16 @@ class GeminiJsonClient
             }
 
             $decoded = $this->decodeModelJson($text);
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             throw $e;
         } catch (\Throwable $e) {
             Log::error("{$featureLabel} provider unavailable or incompatible.", ['exception' => get_class($e)]);
-            abort(502, "{$featureLabel} provider unavailable or incompatible.");
+            throw new AiProviderUnavailable(AiProviderUnavailable::CAPACITY_MESSAGE, 502, 'GEMINI_CAPACITY_ISSUE');
         }
 
         if (!is_array($decoded)) {
             Log::error("{$featureLabel} provider returned malformed JSON structure.");
-            abort(502, "{$featureLabel} provider returned malformed analysis.");
+            throw new AiProviderUnavailable(AiProviderUnavailable::CAPACITY_MESSAGE, 502, 'GEMINI_CAPACITY_ISSUE');
         }
 
         return [

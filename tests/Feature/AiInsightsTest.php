@@ -332,6 +332,9 @@ class AiInsightsTest extends TestCase
             if ($fakeMode === 'error_500') {
                 return Http::response(['error' => ['message' => 'upstream error']], 500);
             }
+            if ($fakeMode === 'error_503') {
+                return Http::response(['error' => ['message' => 'capacity']], 503);
+            }
             if ($fakeMode === 'non_json') {
                 return Http::response([
                     'candidates' => [['content' => ['parts' => [['text' => 'not json at all']]]]],
@@ -385,13 +388,25 @@ class AiInsightsTest extends TestCase
         $fakeMode = 'error_500';
         $this->actingAs($owner)
             ->postJson("/api/v1/organizations/{$org->id}/fleet-carbon-ai", [])
-            ->assertStatus(502);
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
+
+        // 502 with GEMINI_CAPACITY_ISSUE on Gemini HTTP 503.
+        $fakeMode = 'error_503';
+        $this->actingAs($owner)
+            ->postJson("/api/v1/organizations/{$org->id}/fleet-carbon-ai", [])
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
 
         // 502 on non-JSON Gemini text.
         $fakeMode = 'non_json';
         $this->actingAs($owner)
             ->postJson("/api/v1/organizations/{$org->id}/fleet-carbon-ai", [])
-            ->assertStatus(502);
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
 
         // 503 when GEMINI_API_KEY is missing.
         config(['dtc_ai.key' => '']);
@@ -713,7 +728,11 @@ class AiInsightsTest extends TestCase
         ]);
 
         $callCount = 0;
-        Http::fake(function () use (&$callCount, $coachJson) {
+        $fakeMode = 'thinking_fallback';
+        Http::fake(function () use (&$callCount, &$fakeMode, $coachJson) {
+            if ($fakeMode === 'error_503') {
+                return Http::response(['error' => ['message' => 'capacity']], 503);
+            }
             $callCount++;
             if ($callCount === 1) {
                 return Http::response(['error' => ['status' => 'INVALID_ARGUMENT', 'message' => 'thinkingConfig unsupported']], 400);
@@ -754,6 +773,13 @@ class AiInsightsTest extends TestCase
                 && !str_contains($promptText, 'Other Driver Secret')
                 && !str_contains($promptText, 'SECRETPLATE99');
         });
+
+        $fakeMode = 'error_503';
+        $this->actingAs($driver1User)
+            ->postJson("/api/v1/organizations/{$org->id}/driver/me/eco-coach-ai", ['days' => 14])
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
     }
 
     public function test_platform_health_triage_ai_enforces_admin_role_scrubs_pii_and_degrades_logging_cleanly(): void
@@ -938,7 +964,11 @@ class AiInsightsTest extends TestCase
 
         // Verify 502 on Gemini provider error and 503 when key missing.
         $fakeMode = 'error_503';
-        $this->actingAs($admin)->postJson('/api/v1/platform/health-triage-ai', [])->assertStatus(502);
+        $this->actingAs($admin)
+            ->postJson('/api/v1/platform/health-triage-ai', [])
+            ->assertStatus(502)
+            ->assertJsonPath('desc', 'Please try again later due to Google Gemini capacity issue')
+            ->assertJsonPath('data.error.code', 'GEMINI_CAPACITY_ISSUE');
 
         config(['dtc_ai.key' => '']);
         $this->actingAs($admin)->postJson('/api/v1/platform/health-triage-ai', [])->assertStatus(503);
