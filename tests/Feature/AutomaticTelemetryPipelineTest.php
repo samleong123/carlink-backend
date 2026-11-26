@@ -91,7 +91,9 @@ class AutomaticTelemetryPipelineTest extends TestCase
         $query='?from='.urlencode($f[6]->toIso8601String()).'&to='.urlencode($f[6]->addHour()->toIso8601String());
         $this->actingAs($f[1])->getJson($base.$query)->assertOk()->assertJsonCount(1,'data.items');
         $this->getJson($base)->assertUnprocessable();
-        $this->getJson($base.'?from='.urlencode($f[6]->toIso8601String()).'&to='.urlencode($f[6]->addDays(2)->toIso8601String()))->assertUnprocessable();
+        // Multi-day (>24h) windows are permitted, while inverted ranges (to <= from) are rejected
+        $this->getJson($base.'?from='.urlencode($f[6]->toIso8601String()).'&to='.urlencode($f[6]->addDays(2)->toIso8601String()))->assertOk()->assertJsonCount(1,'data.items');
+        $this->getJson($base.'?from='.urlencode($f[6]->toIso8601String()).'&to='.urlencode($f[6]->subMinute()->toIso8601String()))->assertUnprocessable();
         Membership::where('organization_id',$f[0]->id)->update(['role'=>'driver']);
         $this->getJson($base.$query)->assertForbidden();
     }

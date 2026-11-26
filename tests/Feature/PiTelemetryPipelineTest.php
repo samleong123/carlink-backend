@@ -123,7 +123,8 @@ class PiTelemetryPipelineTest extends TestCase
         $this->assertEqualsWithDelta(0.075,$r->json('data.fuel_litres'),0.000001);
         $r->assertJsonPath('data.covered_seconds',5)->assertJsonPath('data.unknown_seconds',20);
         $this->getJson($base)->assertUnprocessable();
-        $this->getJson($base.'?from='.urlencode($f[5]->toIso8601String()).'&to='.urlencode($f[5]->addDays(2)->toIso8601String()))->assertUnprocessable();
+        $this->getJson($base.'?from='.urlencode($f[5]->toIso8601String()).'&to='.urlencode($f[5]->addDays(2)->toIso8601String()))->assertOk();
+        $this->getJson($base.'?from='.urlencode($f[5]->toIso8601String()).'&to='.urlencode($f[5]->subMinute()->toIso8601String()))->assertUnprocessable();
     }
     public function test_millisecond_pi_timestamps_keep_gps_when_inbox_occurred_at_is_whole_seconds(): void
     {

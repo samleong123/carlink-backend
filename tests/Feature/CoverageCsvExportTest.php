@@ -451,4 +451,23 @@ class CoverageCsvExportTest extends TestCase
             ->getJson("/api/v1/organizations/{$org->id}/coverage-map?{$query}&export=1")
             ->assertNotFound();
     }
+
+    public function test_export_csv_allows_multi_day_timeframes_beyond_24_hours(): void
+    {
+        [$owner, $org, , $device, , $at] = $this->fixture();
+
+        $this->receivePiPacket($org, $device, $at);
+        $this->artisan('telemetry:project-pending')->assertSuccessful();
+
+        $query = http_build_query([
+            'from' => $at->subDays(5)->toIso8601String(),
+            'to' => $at->addDays(2)->toIso8601String(),
+            'export' => 1,
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson("/api/v1/organizations/{$org->id}/coverage-map?{$query}")
+            ->assertOk()
+            ->assertJsonPath('data.rows', 1);
+    }
 }

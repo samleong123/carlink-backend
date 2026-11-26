@@ -32,6 +32,7 @@ if (file_exists(__DIR__.'/notifications.php')) { require __DIR__.'/notifications
 if (file_exists(__DIR__.'/compliance.php')) { require __DIR__.'/compliance.php'; }
 if (file_exists(__DIR__.'/mileage.php')) { require __DIR__.'/mileage.php'; }
 if (file_exists(__DIR__.'/journeys.php')) { require __DIR__.'/journeys.php'; }
+if (file_exists(__DIR__.'/incidents.php')) { require __DIR__.'/incidents.php'; }
 require __DIR__.'/telemetry.php';
 require __DIR__.'/administration.php';
 require __DIR__.'/saas.php';

@@ -9,6 +9,7 @@ Schedule::command('journeys:mark-gaps')->everyMinute()->withoutOverlapping();
 Schedule::command('compliance:evaluate')->everyMinute()->withoutOverlapping();
 Schedule::command('telemetry:project-pending')->everyMinute()->withoutOverlapping();
 Schedule::command('maintenance:evaluate')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('incidents:evaluate-connectivity')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('mail:dispatch-pending')->everyMinute()->withoutOverlapping();
 Schedule::command('mail:generate-notifications')->hourly()->withoutOverlapping();
 Schedule::command('privacy:retain-driver-history')->daily()->withoutOverlapping();
